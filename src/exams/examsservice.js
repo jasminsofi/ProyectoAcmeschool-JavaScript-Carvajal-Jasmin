@@ -1,20 +1,20 @@
-// traer StorageManager para guardar y leer los examenes en localStorage
+// Trae StorageManager para guardar y leer los exámenes en localStorage
 import { StorageManager } from "../storage/storagemanager.js";
 
-// Clave donde se guardan los examenes en localStorage
+// Clave donde se guardan los exámenes en localStorage
 const EXAMS_KEY = "acmeschool_exams";
 
-// Clase con las operaciones para gestionar examenes
+// Clase con las operaciones para gestionar exámenes
 export class ExamsService {
-  // Devuelve todos los examenes guardados o uno vacio si no hay ninguno 
+  // Devuelve todos los exámenes guardados o un arreglo vacío si no hay ninguno
   static getAll() {
-    // Lee la lista de examenes desde localStorage
+    // Lee la lista de exámenes desde localStorage
     return StorageManager.getItem(EXAMS_KEY, []);
   }
 
   // Busca un examen por su id
   static getById(examId) {
-    // Obtiene todos los examenes
+    // Obtiene todos los exámenes
     const exams = this.getAll();
     // Retorna el examen que coincida con examId
     return exams.find((exam) => exam.id === examId);
@@ -32,10 +32,10 @@ export class ExamsService {
     for (const question of questions) {
       // Obtiene las opciones de la pregunta
       const options = question.options || [];
-      // Cuenta cuantas opciones tienen isCorrect en true
+      // Cuenta cuántas opciones tienen isCorrect en true
       const correctCount = options.filter((opt) => opt.isCorrect === true).length;
 
-      // El enunciado pide que cada pregunta tenga solo una respuesta correcta
+      // Cada pregunta debe tener exactamente una respuesta correcta
       if (correctCount !== 1) {
         // Si tiene 0 o más de 1 respuesta correcta, retorna false
         return false;
@@ -51,7 +51,7 @@ export class ExamsService {
     // Obtiene los exámenes actuales
     const exams = this.getAll();
 
-    // Verifica que las preguntas tengan una sola respuesta correcta
+    // Verifica que las preguntas existan y tengan una sola respuesta correcta
     if (!this.hasValidQuestions(examData.questions)) {
       // Retorna error si no cumple esa regla
       return {
@@ -62,15 +62,15 @@ export class ExamsService {
 
     // Crea el objeto del examen con un id sencillo
     const newExam = {
-      // Genera un id unico simple
+      // Genera un id único simple
       id: "exam-" + Date.now(),
       // Código del examen
       code: examData.code,
-      // Titulo del examen
+      // Título del examen
       title: examData.title,
-      // Tiempo en minutos
+      // Tiempo en minutos convertido a número
       timeMinutes: Number(examData.timeMinutes),
-      // Porcentaje minimo para aprobar
+      // Porcentaje mínimo para aprobar convertido a número
       passingScore: Number(examData.passingScore),
       // Descripción del examen
       description: examData.description,
@@ -99,9 +99,12 @@ export class ExamsService {
       return { success: false, message: "Examen no encontrado." };
     }
 
-    // Valida las preguntas si vienen en updatedData par que tengan solo una respuesta correcta 
-    if (updatedData.questions && !this.hasValidQuestions(updatedData.questions)) {
-      // Retorna error si no tiene exactamente una respuesta correcta por pregunta
+    // Determina qué preguntas quedarán (las nuevas si vienen, o las que ya tenía)
+    const nextQuestions = updatedData.questions ?? exams[index].questions;
+
+    // Valida que las preguntas tengan una sola respuesta correcta
+    if (!this.hasValidQuestions(nextQuestions)) {
+      // Retorna error si no cumple la regla
       return {
         success: false,
         message: "Cada pregunta debe tener una sola respuesta marcada como correcta.",
@@ -122,8 +125,8 @@ export class ExamsService {
       passingScore: Number(updatedData.passingScore ?? exams[index].passingScore),
       // Toma la nueva descripción o deja la anterior
       description: updatedData.description ?? exams[index].description,
-      // Toma las nuevas preguntas o deja las anteriores
-      questions: updatedData.questions ?? exams[index].questions,
+      // Guarda las preguntas validadas
+      questions: nextQuestions,
     };
 
     // Guarda los cambios en localStorage

@@ -34,13 +34,15 @@ export class NavbarComponent extends HTMLElement {
     const isLoggedIn = AuthService.isAuthenticated();
     // Obtiene los datos de la sesión actual (o null si no ha iniciado sesión)
     const session = AuthService.getCurrentSession();
+    // Obtiene el nombre de forma segura aunque session no tenga fullName
+    const userName = session?.fullName || "Usuario";
 
     // se realiza el menú de enlaces según el estado de autenticación
     const privateLinksHtml = isLoggedIn
       ? `
         <button type="button" class="nav-btn" data-view="users">Gestión de usuarios</button>
         <button type="button" class="nav-btn" data-view="exams">Gestión de exámenes</button>
-        <span class="nav-user">Hola, ${session.fullName}</span>
+        <span class="nav-user">Hola, ${userName}</span>
         <button type="button" class="nav-btn logout-btn" id="logoutBtn">Cerrar sesión</button>
       `
       : `

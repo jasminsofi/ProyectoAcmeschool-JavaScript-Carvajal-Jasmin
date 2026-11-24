@@ -1,3 +1,10 @@
+// Importa StorageManager para leer y guardar datos iniciales en localStorage
+import { StorageManager } from "../storage/storagemanager.js";
+
+// Clave donde se almacenan los exámenes en localStorage
+const EXAMS_KEY = "acmeschool_exams";
+
+// Datos iniciales de exámenes de ejemplo para pruebas
 export const initialExams = [
   {
     id: "exam-1",
@@ -28,3 +35,17 @@ export const initialExams = [
     ]
   }
 ];
+
+// Clase encargada de inicializar los datos semilla al arrancar la aplicación
+export class SeedData {
+  // Carga initialExams solo si aún no hay exámenes guardados en localStorage
+  static init() {
+    // Busca si ya existen exámenes guardados; si no hay, devuelve null
+    const existingExams = StorageManager.getItem(EXAMS_KEY, null);
+
+    // Solo guarda los datos semilla la primera vez (o cuando no existan)
+    if (!existingExams) {
+      StorageManager.setItem(EXAMS_KEY, initialExams);
+    }
+  }
+}
