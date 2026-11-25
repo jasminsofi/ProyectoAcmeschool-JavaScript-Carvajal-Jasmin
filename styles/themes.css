@@ -1,0 +1,24 @@
+/* Variables de color del tema para Acme School */
+:root {
+  /* Fondo general azul claro tipo cielo */
+  --bg-sky: #dff3ff;
+  --bg-sky-gradient: linear-gradient(180deg, #e8f7ff 0%, #ccecff 100%);
+
+  /* Superficies y textos con buen contraste */
+  --surface-card: #ffffff;
+  --surface-subtle: #f3faff;
+  --text-main: #102a43;
+  --text-muted: #486581;
+  --border-soft: #bae3ff;
+
+  /* Botones verde biche */
+  --btn-biche: #7bc043;
+  --btn-biche-hover: #67aa32;
+  --btn-biche-active: #559125;
+  --btn-biche-text: #ffffff;
+
+  /* Detalles para el temporizador y resultados */
+  --timer-bg: #fff8e6;
+  --timer-border: #f59e0b;
+  --timer-text: #92400e;
+}

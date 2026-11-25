@@ -1,75 +1,48 @@
-// Importa StorageManager para guardar y consultar la sesión en localStorage
 import { StorageManager } from "../storage/storagemanager.js";
-
-// Clave donde se guarda la sesión activa del usuario
-const SESSION_KEY = "acmeschool_session";
-// Clave donde podrían estar guardados usuarios registrados (si usas UsersService)
-const USERS_KEY = "acmeschool_users";
-
-// Clase encargada de manejar el inicio, cierre y consulta de sesión
 export class AuthService {
-  // Inicia sesión validando correo y contraseña
-  static login(email, password) {
-    const cleanEmail = String(email || "").trim().toLowerCase();
-    const cleanPassword = String(password || "").trim();
 
-    if (!cleanEmail || !cleanPassword) {
-      return {
-        ok: false,
-        message: "Por favor ingresa tu correo y contraseña."
-      };
+    static login(email, password) {
+
+        const users =
+            StorageManager.get("users");
+
+        return users.find(
+            user =>
+                user.email === email &&
+                user.password === password
+        );
+
     }
 
-    const storedUsers = StorageManager.getItem(USERS_KEY, []);
-    const matchedUser = Array.isArray(storedUsers)
-      ? storedUsers.find(
-          (u) =>
-            String(u.email || "").trim().toLowerCase() === cleanEmail &&
-            String(u.password || "") === cleanPassword
-        )
-      : null;
+    static saveSession(user) {
 
-    const sessionUser = matchedUser
-      ? {
-          id: matchedUser.id || Date.now(),
-          name: matchedUser.name || cleanEmail.split("@")[0],
-          email: matchedUser.email,
-          role: matchedUser.role || "admin"
-        }
-      : {
-          id: "user-demo",
-          name: cleanEmail.split("@")[0] || "Usuario",
-          email: cleanEmail,
-          role: "admin"
-        };
+        localStorage.setItem(
+            "session",
+            JSON.stringify(user)
+        );
 
-    // Guarda la sesión activa en localStorage
-    StorageManager.setItem(SESSION_KEY, sessionUser);
+    }
 
-    return {
-      ok: true,
-      user: sessionUser,
-      message: "Sesión iniciada correctamente."
-    };
-  }
+    static getSession() {
 
-  // Cierra la sesión actual eliminando la clave de localStorage
-  static logout() {
-    StorageManager.removeItem(SESSION_KEY);
-  }
+        return JSON.parse(
+            localStorage.getItem("session")
+        );
 
-  // Devuelve la sesión actual (usado por NavbarComponent)
-  static getCurrentSession() {
-    return StorageManager.getItem(SESSION_KEY, null);
-  }
+    }
 
-  // Alias por compatibilidad si algún módulo llama a getCurrentUser()
-  static getCurrentUser() {
-    return this.getCurrentSession();
-  }
+    static logout() {
 
-  // Indica si hay un usuario con sesión activa
-  static isAuthenticated() {
-    return Boolean(this.getCurrentSession());
-  }
+        localStorage.removeItem(
+            "session"
+        );
+
+    }
+
+    static isAuthenticated() {
+
+        return !!this.getSession();
+
+    }
+
 }

@@ -1,0 +1,174 @@
+/* Reinicio básico y caja de modelo consistente */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg-sky-gradient);
+  background-color: var(--bg-sky);
+  color: var(--text-main);
+  min-height: 100vh;
+}
+
+/* Barra superior y contenedor principal */
+navbar-component {
+  display: block;
+  background-color: #ffffff;
+  border-bottom: 2px solid var(--border-soft);
+  padding: 12px 20px;
+}
+
+#appContainer {
+  max-width: 900px;
+  margin: 24px auto;
+  padding: 0 16px 32px;
+}
+
+/* Títulos y textos base */
+h1, h2, h3 {
+  margin-top: 0;
+  color: var(--text-main);
+}
+
+p {
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* Botones en verde biche */
+button {
+  background-color: var(--btn-biche);
+  color: var(--btn-biche-text);
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 0.95rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+button:hover {
+  background-color: var(--btn-biche-hover);
+}
+
+button:active {
+  background-color: var(--btn-biche-active);
+  transform: scale(0.98);
+}
+
+button:disabled {
+  background-color: #a7d485;
+  cursor: not-allowed;
+}
+
+/* Lista y tarjetas de exámenes */
+.exams-list-section,
+.take-exam-section,
+section {
+  background-color: var(--surface-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 6px 18px rgba(16, 42, 67, 0.06);
+}
+
+.exams-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.exam-card {
+  background-color: var(--surface-subtle);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* Temporizador regresivo */
+.exam-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--timer-bg);
+  color: var(--timer-text);
+  border: 1px solid var(--timer-border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  margin: 12px 0 18px;
+  font-size: 1rem;
+}
+
+/* Campos del formulario y preguntas */
+form > div {
+  margin-bottom: 14px;
+}
+
+label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: bold;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"] {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #90cdf4;
+  border-radius: 8px;
+  font-size: 1rem;
+  background-color: #ffffff;
+  color: var(--text-main);
+}
+
+.question-block {
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  background-color: var(--surface-subtle);
+}
+
+.question-block legend {
+  font-weight: bold;
+  padding: 0 6px;
+}
+
+.option-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: normal;
+  padding: 6px 0;
+  cursor: pointer;
+}
+
+.option-item input[type="radio"] {
+  width: auto;
+  margin: 0;
+}
+
+/* Caja de resultados */
+#examResultBox {
+  margin-top: 20px;
+}
+
+#examResultBox:empty {
+  display: none;
+}
+
+#examResultBox > * {
+  background-color: var(--surface-subtle);
+  border-left: 4px solid var(--btn-biche);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
