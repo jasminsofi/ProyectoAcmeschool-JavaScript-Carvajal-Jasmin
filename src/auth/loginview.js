@@ -1,41 +1,85 @@
-import { AuthService } from "./authservice.js";
-const form =
-document.querySelector("#loginForm");
+import { AuthService } from './authservice.js';
 
-form?.addEventListener(
-    "submit",
-    e => {
+export class LoginView {
+  constructor(container, onLoginSuccess) {
+    this.container = container;
+    this.onLoginSuccess = onLoginSuccess;
+  }
 
-        e.preventDefault();
+  render() {
+    this.container.innerHTML = `
+      <section class="card login-card" aria-labelledby="loginTitle">
+        <h2 id="loginTitle">Iniciar Sesión</h2>
+        <p class="text-muted">
+          Acceso para personal administrativo y docentes. Los estudiantes pueden ir a <strong>Resolver Examen</strong> sin iniciar sesión.
+        </p>
 
-        const email =
-            document.querySelector("#email").value;
+        <form id="loginForm" class="form-grid" novalidate>
+          <div class="form-group">
+            <label for="loginEmail">Correo electrónico</label>
+            <input
+              type="email"
+              id="loginEmail"
+              name="email"
+              placeholder="correo@acmeschool.edu"
+              required
+            />
+          </div>
 
-        const password =
-            document.querySelector("#password").value;
+          <div class="form-group">
+            <label for="loginPassword">Contraseña</label>
+            <input
+              type="password"
+              id="loginPassword"
+              name="password"
+              placeholder="Ingresa tu contraseña"
+              required
+            />
+          </div>
 
-        const user =
-            AuthService.login(
-                email,
-                password
-            );
+          <p id="loginError" class="error-msg" role="alert" hidden></p>
 
-        if(user){
+          <div class="form-actions">
+            <button type="submit" class="btn-primary">Ingresar</button>
+          </div>
+        </form>
+      </section>
+    `;
 
-            AuthService.saveSession(
-                user
-            );
+    this._bindEvents();
+  }
 
-            location.hash =
-                "#usuarios";
+  _bindEvents() {
+    const form = this.container.querySelector('#loginForm');
+    const emailInput = this.container.querySelector('#loginEmail');
+    const passwordInput = this.container.querySelector('#loginPassword');
+    const errorEl = this.container.querySelector('#loginError');
 
-        }else{
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      errorEl.hidden = true;
+      errorEl.textContent = '';
 
-            alert(
-                "Credenciales incorrectas"
-            );
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
 
-        }
+      if (!email || !password) {
+        errorEl.textContent = 'Por favor completa el correo electrónico y la contraseña.';
+        errorEl.hidden = false;
+        return;
+      }
 
-    }
-);
+      const result = AuthService.login(email, password);
+
+      if (!result.ok) {
+        errorEl.textContent = result.message;
+        errorEl.hidden = false;
+        return;
+      }
+
+      if (typeof this.onLoginSuccess === 'function') {
+        this.onLoginSuccess(result.user);
+      }
+    });
+  }
+}

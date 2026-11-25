@@ -2,20 +2,16 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <!-- Hace que la página se adapte bien a distintas pantallas -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Acme School</title>
-    <link rel="stylesheet" href="./styles/main.css" />
+    <title>Acme School - Plataforma de Exámenes</title>
     <link rel="stylesheet" href="./styles/themes.css" />
+    <link rel="stylesheet" href="./styles/main.css" />
   </head>
   <body>
-    <!-- Web Component para la barra de navegación superior -->
-    <navbar-component id="mainNavbar"></navbar-component>
+    <acme-navbar></acme-navbar>
 
-    <!-- Contenedor principal donde se irán dibujando las vistas -->
-    <main id="appContainer"></main>
+    <main id="appView" class="container"></main>
 
-    <!-- Carga app.js como módulo ES desde la raíz del proyecto -->
     <script type="module" src="./src/app.js"></script>
   </body>
 </html>

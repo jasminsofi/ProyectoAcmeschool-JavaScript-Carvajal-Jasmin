@@ -1,75 +1,86 @@
-// Define el Web Component TimerComponent para mostrar la cuenta regresiva del examen
+// Web Component de cuenta regresiva en tiempo real para el examen
 export class TimerComponent extends HTMLElement {
-  // Inicializa las propiedades internas del temporizador
   constructor() {
     super();
     this.remainingSeconds = 0;
     this.intervalId = null;
+    this.expired = false;
   }
 
-  // Se ejecuta cuando el componente se inserta en el DOM
   connectedCallback() {
-    // Dibuja el marcador inicial si aún no tiene contenido
-    if (!this.innerHTML.trim()) {
-      this.render();
-    }
+    this.render();
   }
 
-  // Se ejecuta automáticamente si el componente se quita del DOM (evita intervalos sueltos)
   disconnectedCallback() {
     this.stop();
   }
 
-  // Convierte segundos a formato MM:SS
-  formatTime(totalSeconds) {
-    const safeSeconds = Math.max(0, Number(totalSeconds) || 0);
-    const minutes = Math.floor(safeSeconds / 60);
-    const seconds = safeSeconds % 60;
-    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-  }
-
-  // Inicia la cuenta regresiva recibiendo la duración en minutos
-  start(minutes = 10) {
-    // Detiene cualquier contador previo
+  // Inicia el temporizador con la cantidad de minutos asignados al examen
+  start(minutes) {
     this.stop();
-
-    // Calcula el total de segundos
-    this.remainingSeconds = Math.max(1, Number(minutes) || 10) * 60;
+    this.expired = false;
+    const safeMinutes = Math.max(0, Number(minutes) || 0);
+    this.remainingSeconds = Math.round(safeMinutes * 60);
     this.render();
 
-    // Actualiza el reloj cada 1 segundo
+    if (this.remainingSeconds <= 0) {
+      this._handleExpire();
+      return;
+    }
+
     this.intervalId = setInterval(() => {
       this.remainingSeconds -= 1;
-      this.render();
 
-      // Cuando se agota el tiempo, detiene el reloj y avisa a la vista del examen
       if (this.remainingSeconds <= 0) {
-        this.stop();
-        this.dispatchEvent(new CustomEvent("time-up", { bubbles: true }));
+        this.remainingSeconds = 0;
+        this.render();
+        this._handleExpire();
+        return;
       }
+
+      this.render();
     }, 1000);
   }
 
-  // Detiene el intervalo activo si existe
+  // Detiene el intervalo de tiempo
   stop() {
-    if (this.intervalId) {
+    if (this.intervalId !== null) {
       clearInterval(this.intervalId);
       this.intervalId = null;
     }
   }
 
-  // Dibuja el reloj en pantalla
+  _handleExpire() {
+    this.stop();
+    if (this.expired) return;
+    this.expired = true;
+
+    this.dispatchEvent(
+      new CustomEvent('time-expired', {
+        bubbles: true,
+      })
+    );
+  }
+
+  _formatTime(totalSeconds) {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    const mm = String(mins).padStart(2, '0');
+    const ss = String(secs).padStart(2, '0');
+    return `${mm}:${ss}`;
+  }
+
   render() {
+    const isLowTime = this.remainingSeconds > 0 && this.remainingSeconds <= 60;
     this.innerHTML = `
-      <div class="exam-timer">
-        <span>Tiempo restante:</span>
-        <strong id="timerDisplay">${this.formatTime(this.remainingSeconds)}</strong>
+      <div class="timer-box ${isLowTime ? 'timer-box--warning' : ''}" aria-live="polite">
+        <span class="timer-box__label">Tiempo restante</span>
+        <strong class="timer-box__clock">${this._formatTime(this.remainingSeconds)}</strong>
       </div>
     `;
   }
 }
 
-// Registra la etiqueta personalizada <timer-component> si aún no existe
-if (!customElements.get("timer-component")) {
-  customElements.define("timer-component", TimerComponent);
+if (!customElements.get('acme-timer')) {
+  customElements.define('acme-timer', TimerComponent);
 }

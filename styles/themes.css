@@ -1,24 +1,42 @@
-/* Variables de color del tema para Acme School */
+/* Variables de tema y diseño para Acme School (Azul claro + Verde biche) */
 :root {
-  /* Fondo general azul claro tipo cielo */
-  --bg-sky: #dff3ff;
-  --bg-sky-gradient: linear-gradient(180deg, #e8f7ff 0%, #ccecff 100%);
+  --bg-page: #e0f2fe;
+  --bg-surface: #ffffff;
+  --bg-subtle: #f0f9ff;
 
-  /* Superficies y textos con buen contraste */
-  --surface-card: #ffffff;
-  --surface-subtle: #f3faff;
-  --text-main: #102a43;
-  --text-muted: #486581;
-  --border-soft: #bae3ff;
+  --text-main: #0f172a;
+  --text-muted: #475569;
 
-  /* Botones verde biche */
-  --btn-biche: #7bc043;
-  --btn-biche-hover: #67aa32;
-  --btn-biche-active: #559125;
-  --btn-biche-text: #ffffff;
+  /* Verde biche para botones principales y acentos */
+  --primary: #84cc16;
+  --primary-hover: #65a30d;
+  --primary-soft: #ecfccb;
+  --primary-text: #1a2e05;
 
-  /* Detalles para el temporizador y resultados */
-  --timer-bg: #fff8e6;
-  --timer-border: #f59e0b;
-  --timer-text: #92400e;
+  /* Azul medio para barra superior que armoniza con el fondo azul claro */
+  --navbar-bg: #0284c7;
+
+  --secondary: #bae6fd;
+  --secondary-hover: #7dd3fc;
+  --secondary-text: #0c4a6e;
+
+  --danger: #5bb4b8;
+  --danger-hover: #b91c1c;
+
+  --success: #87b14c;
+  --success-bg: #ecfccb;
+
+  --warning: #b45309;
+  --warning-bg: #fef3c7;
+
+  --border-color: #bae6fd;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  --shadow-sm: 0 2px 6px rgba(2, 132, 199, 0.1);
+  --shadow-md: 0 8px 24px rgba(2, 132, 199, 0.14);
+
+  --transition-fast: 0.18s ease;
+  --font-sans: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }

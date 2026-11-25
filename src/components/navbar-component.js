@@ -1,97 +1,99 @@
-// Importa AuthService para saber si hay un usuario autenticado y permitir cerrar sesión
-import { AuthService } from "../auth/authservice.js";
-
-// Define la clase NavbarComponent extendiendo HTMLElement para crear la barra de navegación
+// Web Component para la barra de navegación de Acme School
 export class NavbarComponent extends HTMLElement {
-  // Se ejecuta automaticamente cuando el componente se inserta en el DOM
+  constructor() {
+    super();
+    // Usamos Light DOM para que main.css y themes.css apliquen directamente sin fricción
+    this.user = null;
+    this.activeRoute = 'take-exam';
+  }
+
   connectedCallback() {
-    // Dibuja la barra de navegación segun el estado actual de autenticación
     this.render();
+    this._bindEvents();
   }
 
-  // Método publico para volver a dibujar la barra cuando cambie la sesión o la vista
-  refresh() {
-    // Llama a render() para actualizar los enlaces y botones mostrados
+  // Actualiza el estado de usuario y ruta activa desde app.js
+  setState({ user = null, activeRoute = 'take-exam' }) {
+    this.user = user;
+    this.activeRoute = activeRoute;
     this.render();
+    this._bindEvents();
   }
 
-  // Dispara un evento personalizado para cambiar de vista en la aplicación
-  navigateTo(viewName) {
-    // Emite el evento "navigate" enviando el nombre de la vista destino
-    this.dispatchEvent(
-      new CustomEvent("navigate", {
-        // Guarda el nombre de la vista solicitada dentro de detail
-        detail: { view: viewName },
-        // Permite que el evento suba hacia app.js o el contenedor principal
-        bubbles: true,
-      })
-    );
-  }
-
-  // Dibuja el HTML de la barra según si el usuario inició sesión o no
   render() {
-    // Consulta si hay un usuario autenticado actualmente
-    const isLoggedIn = AuthService.isAuthenticated();
-    // Obtiene los datos de la sesión actual (o null si no ha iniciado sesión)
-    const session = AuthService.getCurrentSession();
-    // Obtiene el nombre de forma segura aunque session no tenga fullName
-    const userName = session?.fullName || "Usuario";
+    const isLoggedIn = Boolean(this.user);
 
-    // se realiza el menú de enlaces según el estado de autenticación
-    const privateLinksHtml = isLoggedIn
-      ? `
-        <button type="button" class="nav-btn" data-view="users">Gestión de usuarios</button>
-        <button type="button" class="nav-btn" data-view="exams">Gestión de exámenes</button>
-        <span class="nav-user">Hola, ${userName}</span>
-        <button type="button" class="nav-btn logout-btn" id="logoutBtn">Cerrar sesión</button>
-      `
-      : `
-        <button type="button" class="nav-btn" data-view="login">Login</button>
-      `;
-
-    // Inserta la barra completa dentro del Web Component
     this.innerHTML = `
-      <nav class="navbar">
-        <strong class="brand">Acme School</strong>
-        <div class="nav-links">
-          <button type="button" class="nav-btn" data-view="take-exam">Resolver exámenes</button>
-          ${privateLinksHtml}
+      <header class="navbar">
+        <div class="navbar__brand">
+          <span class="navbar__logo">Acme School</span>
         </div>
-      </nav>
+
+        <nav class="navbar__links" aria-label="Navegación principal">
+          ${
+            isLoggedIn
+              ? `
+                <button type="button" class="nav-btn ${this.activeRoute === 'users' ? 'is-active' : ''}" data-route="users">
+                  Usuarios
+                </button>
+                <button type="button" class="nav-btn ${this.activeRoute === 'exams' ? 'is-active' : ''}" data-route="exams">
+                  Exámenes
+                </button>
+                <button type="button" class="nav-btn ${this.activeRoute === 'take-exam' ? 'is-active' : ''}" data-route="take-exam">
+                  Resolver Examen
+                </button>
+              `
+              : `
+                <button type="button" class="nav-btn ${this.activeRoute === 'take-exam' ? 'is-active' : ''}" data-route="take-exam">
+                  Resolver Examen
+                </button>
+                <button type="button" class="nav-btn ${this.activeRoute === 'login' ? 'is-active' : ''}" data-route="login">
+                  Iniciar Sesión
+                </button>
+              `
+          }
+        </nav>
+
+        <div class="navbar__session">
+          ${
+            isLoggedIn
+              ? `
+                <span class="session-badge">${this.user.fullName} (${this.user.role})</span>
+                <button type="button" class="btn-logout" id="logoutBtn">Cerrar sesión</button>
+              `
+              : `<span class="session-badge session-badge--public">Modo público</span>`
+          }
+        </div>
+      </header>
     `;
+  }
 
-    // Selecciona todos los botones que cambian de vista usando data-view
-    const viewButtons = this.querySelectorAll("[data-view]");
-    // Recorre cada botón de navegación para asignarle su evento click
-    for (const btn of viewButtons) {
-      // Escucha el clic en el botón
-      btn.addEventListener("click", () => {
-        // Obtiene el nombre de la vista guardado en el atributo data-view
-        const targetView = btn.getAttribute("data-view");
-        // Llama a navigateTo para avisar qué vista abrir
-        this.navigateTo(targetView);
+  _bindEvents() {
+    this.querySelectorAll('[data-route]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const route = btn.dataset.route;
+        this.dispatchEvent(
+          new CustomEvent('navigate', {
+            detail: { route },
+            bubbles: true,
+          })
+        );
       });
-    }
+    });
 
-    // Busca el botón de cerrar sesión (solo existe si isLoggedIn es true)
-    const logoutBtn = this.querySelector("#logoutBtn");
-    // Si existe el botón de cerrar sesión, le agrega el evento click
+    const logoutBtn = this.querySelector('#logoutBtn');
     if (logoutBtn) {
-      // Escucha el clic para cerrar la sesión
-      logoutBtn.addEventListener("click", () => {
-        // Borra la sesión activa en AuthService
-        AuthService.logout();
-        // Vuelve a dibujar la barra ya sin sesión iniciada
-        this.render();
-        // Dispara el evento "logout" para que la app regrese a una vista segura
-        this.dispatchEvent(new CustomEvent("logout", { bubbles: true }));
+      logoutBtn.addEventListener('click', () => {
+        this.dispatchEvent(
+          new CustomEvent('logout', {
+            bubbles: true,
+          })
+        );
       });
     }
   }
 }
 
-// Registra la etiqueta personalizada <navbar-component> si aún no existe
-if (!customElements.get("navbar-component")) {
-  // Asocia el nombre "navbar-component" con la clase NavbarComponent
-  customElements.define("navbar-component", NavbarComponent);
+if (!customElements.get('acme-navbar')) {
+  customElements.define('acme-navbar', NavbarComponent);
 }

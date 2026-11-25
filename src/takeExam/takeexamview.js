@@ -1,252 +1,285 @@
-// Importa el servicio de calificación, StorageManager y el Web Component del temporizador
-import { TakeExamService } from "./takeexamservice.js";
-import { StorageManager } from "../storage/storagemanager.js";
-import "../components/timer-component.js";
+import { TakeExamService } from './takeexamservice.js';
+import '../components/timer-component.js';
+import '../components/exam-card.js';
 
-const EXAMS_KEY = "acmeschool_exams";
-
-// Vista encargada de listar exámenes disponibles, correr el temporizador y calificar
 export class TakeExamView {
-  constructor(container, onBackToExams = null) {
+  constructor(container) {
     this.container = container;
-    this.onBackToExams = onBackToExams;
-    this.exam = null;
-    this.isSubmitted = false;
+    this.step = 'list'; // 'list' | 'student-info' | 'taking' | 'result'
+    this.selectedExam = null;
+    this.student = null;
+    this.selectedAnswers = {};
+    this.lastResult = null;
+    this.errorMessage = '';
   }
 
-  // Detiene el temporizador si está activo
-  stopTimer() {
-    const timerEl = this.container?.querySelector("#examTimer");
-    if (timerEl && typeof timerEl.stop === "function") {
+  render() {
+    this._stopActiveTimer();
+
+    if (this.step === 'student-info' && this.selectedExam) {
+      this._renderStudentForm();
+      return;
+    }
+
+    if (this.step === 'taking' && this.selectedExam) {
+      this._renderExamSheet();
+      return;
+    }
+
+    if (this.step === 'result' && this.lastResult) {
+      this._renderResult();
+      return;
+    }
+
+    this._renderExamList();
+  }
+
+  _stopActiveTimer() {
+    const timerEl = this.container?.querySelector('acme-timer');
+    if (timerEl && typeof timerEl.stop === 'function') {
       timerEl.stop();
     }
   }
 
-  // Obtiene todos los exámenes guardados en localStorage
-  getExams() {
-    return StorageManager.getItem(EXAMS_KEY, []);
-  }
-
-  // Punto de entrada: si recibe un examen o id lo abre; si no, muestra los exámenes disponibles
-  render(examOrId = null) {
-    this.stopTimer();
-    this.isSubmitted = false;
-
-    const exams = this.getExams();
-
-    // Si no pasaron nada, muestra la lista de exámenes disponibles para elegir
-    if (!examOrId) {
-      this.renderExamList(exams);
-      return;
-    }
-
-    // Busca el examen por objeto o por id
-    const selectedExam =
-      typeof examOrId === "object"
-        ? examOrId
-        : exams.find((item) => String(item.id) === String(examOrId));
-
-    if (!selectedExam) {
-      this.container.innerHTML = `
-        <section class="take-exam-section">
-          <button type="button" id="backToExamsBtn">← Volver a exámenes</button>
-          <p>No se encontró el examen seleccionado.</p>
-        </section>
-      `;
-      this.bindBackButton();
-      return;
-    }
-
-    this.renderExamForm(selectedExam);
-  }
-
-  // Dibuja la lista de exámenes disponibles
-  renderExamList(exams) {
-    if (!Array.isArray(exams) || exams.length === 0) {
-      this.container.innerHTML = `
-        <section class="exams-list-section">
-          <h2>Exámenes disponibles</h2>
-          <p>No hay exámenes disponibles en este momento.</p>
-        </section>
-      `;
-      return;
-    }
-
-    const cardsHtml = exams
-      .map(
-        (exam) => `
-          <article class="exam-card">
-            <h3>${exam.title}</h3>
-            <p>${exam.description || ""}</p>
-            <p><strong>Tiempo:</strong> ${exam.timeMinutes ?? 10} minutos</p>
-            <p><strong>Porcentaje para aprobar:</strong> ${exam.passingScore ?? 70}%</p>
-            <button type="button" class="start-exam-btn" data-exam-id="${exam.id}">
-              Presentar examen
-            </button>
-          </article>
-        `
-      )
-      .join("");
+  // 1. Lista de exámenes disponibles
+  _renderExamList() {
+    const exams = TakeExamService.getAvailableExams();
 
     this.container.innerHTML = `
-      <section class="exams-list-section">
-        <h2>Exámenes disponibles</h2>
-        <p>Selecciona un examen para comenzar.</p>
-        <div class="exams-grid">
-          ${cardsHtml}
+      <section class="card" aria-labelledby="publicExamsTitle">
+        <div class="section-header">
+          <div>
+            <h2 id="publicExamsTitle">Exámenes Disponibles</h2>
+            <p class="text-muted">Selecciona un examen para comenzar. No necesitas iniciar sesión.</p>
+          </div>
+        </div>
+
+        ${
+          exams.length === 0
+            ? `<p class="text-muted">No hay exámenes disponibles en este momento.</p>`
+            : `<div id="publicExamsGrid" class="cards-grid"></div>`
+        }
+      </section>
+    `;
+
+    const grid = this.container.querySelector('#publicExamsGrid');
+    if (!grid) return;
+
+    exams.forEach((exam) => {
+      const card = document.createElement('acme-exam-card');
+      grid.appendChild(card);
+      card.setExam(exam, 'public');
+    });
+
+    grid.addEventListener('exam-card-action', (event) => {
+      if (event.detail.action === 'start') {
+        const found = exams.find((ex) => String(ex.id) === String(event.detail.examId));
+        if (found) {
+          this.selectedExam = found;
+          this.student = null;
+          this.selectedAnswers = {};
+          this.lastResult = null;
+          this.errorMessage = '';
+          this.step = 'student-info';
+          this.render();
+        }
+      }
+    });
+  }
+
+  // 2. Solicitud de número de identificación y nombre completo
+  _renderStudentForm() {
+    this.container.innerHTML = `
+      <section class="card" aria-labelledby="studentDataTitle">
+        <h2 id="studentDataTitle">Datos del Estudiante</h2>
+        <p class="text-muted">
+          Examen seleccionado: <strong>${this.selectedExam.title}</strong>
+          (${this.selectedExam.durationMinutes} min · Aprobación: ${this.selectedExam.passingScore}%)
+        </p>
+
+        <form id="studentInfoForm" class="form-grid" novalidate>
+          <div class="form-group">
+            <label for="studentIdInput">Número de identificación</label>
+            <input
+              type="text"
+              id="studentIdInput"
+              placeholder="Ej: 1005123456"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="studentNameInput">Nombre completo</label>
+            <input
+              type="text"
+              id="studentNameInput"
+              placeholder="Ej: Sofía Morales"
+              required
+            />
+          </div>
+
+          ${
+            this.errorMessage
+              ? `<p class="error-msg" role="alert">${this.errorMessage}</p>`
+              : ''
+          }
+
+          <div class="form-actions">
+            <button type="submit" class="btn-primary">Comenzar examen</button>
+            <button type="button" id="backToListBtn" class="btn-secondary">Volver</button>
+          </div>
+        </form>
+      </section>
+    `;
+
+    this.container.querySelector('#backToListBtn').addEventListener('click', () => {
+      this.errorMessage = '';
+      this.step = 'list';
+      this.render();
+    });
+
+    this.container.querySelector('#studentInfoForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const studentId = this.container.querySelector('#studentIdInput').value;
+      const studentName = this.container.querySelector('#studentNameInput').value;
+
+      const validation = TakeExamService.validateStudent({ studentId, studentName });
+      if (!validation.ok) {
+        this.errorMessage = validation.message;
+        this._renderStudentForm();
+        return;
+      }
+
+      this.student = validation.student;
+      this.selectedAnswers = {};
+      this.errorMessage = '';
+      this.step = 'taking';
+      this.render();
+    });
+  }
+
+  // 3. Vista de resolución del examen con encabezado, cronómetro, preguntas y botón Terminar
+  _renderExamSheet() {
+    const exam = this.selectedExam;
+    const totalQuestions = exam.questions.length;
+
+    this.container.innerHTML = `
+      <section class="card exam-sheet" aria-labelledby="examSheetTitle">
+        <header class="exam-header">
+          <div class="exam-header__info">
+            <h2 id="examSheetTitle">${exam.title}</h2>
+            <p class="text-muted">Estudiante: <strong>${this.student.name}</strong> (ID: ${this.student.id})</p>
+            <div class="exam-header__stats">
+              <span class="badge">Total de preguntas: ${totalQuestions}</span>
+              <span class="badge">Porcentaje para aprobar: ${exam.passingScore}%</span>
+            </div>
+          </div>
+
+          <acme-timer id="examTimer"></acme-timer>
+        </header>
+
+        <form id="takeExamForm" class="questions-form">
+          ${exam.questions
+            .map(
+              (q, qIndex) => `
+                <fieldset class="question-card">
+                  <legend><strong>${qIndex + 1}. ${q.text}</strong></legend>
+                  <div class="choices-group">
+                    ${q.options
+                      .map(
+                        (opt) => `
+                          <label class="choice-item">
+                            <input
+                              type="radio"
+                              name="question-${q.id}"
+                              value="${opt.id}"
+                              ${this.selectedAnswers[q.id] === opt.id ? 'checked' : ''}
+                            />
+                            <span>${opt.text}</span>
+                          </label>
+                        `
+                      )
+                      .join('')}
+                  </div>
+                </fieldset>
+              `
+            )
+            .join('')}
+
+          <div class="form-actions">
+            <button type="submit" id="finishExamBtn" class="btn-primary">Terminar</button>
+          </div>
+        </form>
+      </section>
+    `;
+
+    // Captura selección única por pregunta
+    this.container.querySelectorAll('input[type="radio"]').forEach((radio) => {
+      radio.addEventListener('change', () => {
+        const questionId = radio.name.replace('question-', '');
+        this.selectedAnswers[questionId] = radio.value;
+      });
+    });
+
+    const submitExam = () => {
+      this._stopActiveTimer();
+      this.lastResult = TakeExamService.evaluateAttempt({
+        exam: this.selectedExam,
+        student: this.student,
+        selectedAnswersByQuestion: this.selectedAnswers,
+      });
+      this.step = 'result';
+      this.render();
+    };
+
+    this.container.querySelector('#takeExamForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      submitExam();
+    });
+
+    const timerEl = this.container.querySelector('#examTimer');
+    if (timerEl) {
+      timerEl.addEventListener('time-expired', () => {
+        submitExam();
+      });
+      timerEl.start(exam.durationMinutes);
+    }
+  }
+
+  // 4. Resultado final con porcentaje de respuestas acertadas y estado de aprobación
+  _renderResult() {
+    const res = this.lastResult;
+
+    this.container.innerHTML = `
+      <section class="card result-card ${res.passed ? 'result-card--passed' : 'result-card--failed'}">
+        <h2>Resultado del Examen</h2>
+        <p class="text-muted"><strong>${res.examTitle}</strong> — ${res.studentName} (ID: ${res.studentId})</p>
+
+        <div class="result-summary">
+          <p class="result-percentage">Porcentaje acertado: <strong>${res.percentage}%</strong></p>
+          <p>Respuestas correctas: <strong>${res.correctCount} de ${res.totalQuestions}</strong> (Mínimo requerido: ${res.passingScore}%)</p>
+          <p class="result-status ${res.passed ? 'status-pass' : 'status-fail'}">
+            ${
+              res.passed
+                ? '¡Felicitaciones! Has APROBADO el examen.'
+                : 'No has alcanzado el porcentaje mínimo. Examen NO APROBADO.'
+            }
+          </p>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" id="backToExamsBtn" class="btn-primary">Volver a exámenes</button>
         </div>
       </section>
     `;
 
-    // Conecta cada botón "Presentar examen" para abrir el examen elegido
-    const buttons = this.container.querySelectorAll(".start-exam-btn");
-    buttons.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const examId = btn.dataset.examId;
-        this.render(examId);
-      });
+    this.container.querySelector('#backToExamsBtn').addEventListener('click', () => {
+      this.selectedExam = null;
+      this.student = null;
+      this.selectedAnswers = {};
+      this.lastResult = null;
+      this.step = 'list';
+      this.render();
     });
-  }
-
-  // Dibuja el formulario de un examen específico con su temporizador
-  renderExamForm(exam) {
-    this.exam = exam;
-    const questions = Array.isArray(exam.questions) ? exam.questions : [];
-
-    const questionsHtml = questions
-      .map((question, index) => {
-        const optionsHtml = (question.options || [])
-          .map(
-            (option) => `
-              <label class="option-item">
-                <input
-                  type="radio"
-                  name="question-${question.id}"
-                  value="${option.id}"
-                />
-                <span>${option.description}</span>
-              </label>
-            `
-          )
-          .join("");
-
-        return `
-          <fieldset class="question-block">
-            <legend>Pregunta ${index + 1}: ${question.text}</legend>
-            ${optionsHtml}
-          </fieldset>
-        `;
-      })
-      .join("");
-
-    this.container.innerHTML = `
-      <section class="take-exam-section">
-        <button type="button" id="backToExamsBtn">← Volver a exámenes</button>
-
-        <h2>${exam.title}</h2>
-        <p>${exam.description || ""}</p>
-        <p><strong>Porcentaje mínimo para aprobar:</strong> ${exam.passingScore ?? 70}%</p>
-
-        <!-- Web Component del temporizador regresivo -->
-        <timer-component id="examTimer"></timer-component>
-
-        <form id="takeExamForm">
-          <div>
-            <label for="studentId">Número de identificación del estudiante</label>
-            <input type="text" id="studentId" required />
-          </div>
-
-          <div>
-            <label for="studentName">Nombre completo del estudiante</label>
-            <input type="text" id="studentName" required />
-          </div>
-
-          <div class="questions-list">
-            ${questionsHtml || "<p>Este examen no tiene preguntas registradas.</p>"}
-          </div>
-
-          <button type="submit" id="submitExamBtn">Enviar examen</button>
-        </form>
-
-        <div id="examResultBox"></div>
-      </section>
-    `;
-
-    this.bindBackButton();
-
-    const form = this.container.querySelector("#takeExamForm");
-    if (form) {
-      form.addEventListener("submit", (event) => {
-        event.preventDefault();
-        this.submitExam();
-      });
-    }
-
-    const timerEl = this.container.querySelector("#examTimer");
-    if (timerEl && typeof timerEl.start === "function") {
-      timerEl.start(exam.timeMinutes || 10);
-      timerEl.addEventListener("time-up", () => {
-        this.submitExam();
-      });
-    }
-  }
-
-  // Regresa a la lista de exámenes
-  bindBackButton() {
-    const backBtn = this.container.querySelector("#backToExamsBtn");
-    if (!backBtn) return;
-
-    backBtn.addEventListener("click", () => {
-      this.stopTimer();
-      if (typeof this.onBackToExams === "function") {
-        this.onBackToExams();
-      } else {
-        this.render(null);
-      }
-    });
-  }
-
-  // Califica las respuestas con TakeExamService y muestra el resultado
-  submitExam() {
-    if (this.isSubmitted || !this.exam) return;
-    this.isSubmitted = true;
-
-    this.stopTimer();
-
-    const studentId =
-      this.container.querySelector("#studentId")?.value.trim() || "Sin ID";
-    const studentName =
-      this.container.querySelector("#studentName")?.value.trim() || "Estudiante";
-
-    const answersByQuestionId = {};
-    const questions = Array.isArray(this.exam.questions) ? this.exam.questions : [];
-
-    for (const question of questions) {
-      const checkedInput = this.container.querySelector(
-        `input[name="question-${question.id}"]:checked`
-      );
-      if (checkedInput) {
-        answersByQuestionId[question.id] = checkedInput.value;
-      }
-    }
-
-    const result = TakeExamService.evaluate(this.exam, answersByQuestionId);
-
-    const submitBtn = this.container.querySelector("#submitExamBtn");
-    if (submitBtn) {
-      submitBtn.disabled = true;
-    }
-
-    const resultBox = this.container.querySelector("#examResultBox");
-    if (resultBox) {
-      const statusText = result.passed ? "Aprobado" : "No aprobado";
-      resultBox.innerHTML = `
-        <h3>Resultado del examen</h3>
-        <p><strong>Estudiante:</strong> ${studentName} (${studentId})</p>
-        <p><strong>Aciertos:</strong> ${result.correctCount} de ${result.totalQuestions}</p>
-        <p><strong>Puntaje:</strong> ${result.scorePercentage}% (Mínimo: ${result.passingScore}%)</p>
-        <p><strong>Estado:</strong> ${statusText}</p>
-      `;
-    }
   }
 }
