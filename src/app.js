@@ -9,6 +9,8 @@ import { LoginView } from "./auth/loginview.js";
 import { UsersView } from "./modules/usersview.js";
 import { ExamsView } from "./exams/examsview.js";
 import { TakeExamView } from "./takeExam/takeexamview.js";
+// Ruta corregida desde ./src/app.js hacia ./src/storage/storagemanager.js
+import { StorageManager } from "./storage/storagemanager.js";
 
 // Carga los datos iniciales solo si todavía no hay datos guardados
 SeedData.init();
@@ -38,7 +40,9 @@ function showView(viewName) {
     // Crea la vista de Login y le indica qué hacer cuando el ingreso sea correcto
     const loginView = new LoginView(appContainer, () => {
       // Refresca la barra de navegación para mostrar opciones privadas
-      navbar.refresh();
+      if (typeof navbar?.refresh === "function") {
+        navbar.refresh();
+      }
       // Lleva al usuario a la gestión de exámenes tras iniciar sesión
       showView("exams");
     });
@@ -55,26 +59,32 @@ function showView(viewName) {
   } else {
     // Por defecto ("take-exam"), muestra la vista pública para resolver exámenes
     currentView = "take-exam";
-    const takeExamView = new TakeExamView(appContainer);
+    const takeExamView = new TakeExamView(appContainer, () => {
+      showView("take-exam");
+    });
     takeExamView.render();
   }
 }
 
 // Escucha cuando el usuario hace clic en un botón de navegación del navbar
-navbar.addEventListener("navigate", (event) => {
-  // Obtiene el nombre de la vista destino enviada por el navbar
-  const targetView = event.detail.view;
-  // Muestra esa vista
-  showView(targetView);
-});
+if (navbar) {
+  navbar.addEventListener("navigate", (event) => {
+    // Obtiene el nombre de la vista destino enviada por el navbar
+    const targetView = event.detail.view;
+    // Muestra esa vista
+    showView(targetView);
+  });
 
-// Escucha cuando el usuario cierra sesión desde el navbar
-navbar.addEventListener("logout", () => {
-  // Refresca la barra de navegación
-  navbar.refresh();
-  // Regresa a la vista de resolución de exámenes
-  showView("take-exam");
-});
+  // Escucha cuando el usuario cierra sesión desde el navbar
+  navbar.addEventListener("logout", () => {
+    // Refresca la barra de navegación
+    if (typeof navbar?.refresh === "function") {
+      navbar.refresh();
+    }
+    // Regresa a la vista de resolución de exámenes
+    showView("take-exam");
+  });
+}
 
 // Dibuja la vista inicial al abrir la aplicación
 showView(currentView);
